@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Black_Jack_17</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+        }
+
+        #main {
+            text-align: center;
+        }
+
+        #start {
+            width: 300px;
+        }
+
+        .board {
+            margin: 20px 0;
+            text-align: center;
+            display: flex;
+            /* ai */
+            justify-content: center;
+            /* ai */
+            align-items: flex-start;
+            /* ai */
+        }
+
+        button {
+            margin: 20px;
+            width: 150px;
+        }
+
+        #bet,
+        #money,
+        #result {
+            text-align: center;
+        }
+
+        #betMoney {
+            width: 100px;
+            height: 20px;
+        }
+
+        #betting,
+        #lose {
+            width: 100px
+        }
+
+        .cardZone {
+            margin: 50px;
+            width: 150px;
+            height: 200px;
+            background-color: rgb(202, 177, 177);
+            border: 1px, solid, #000000;
+            font-size: 50px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #rule {
+            position: absolute;
+            left: 70%;
+            top: 0px;
+            font-size: 30px;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="container">
+        <div id="main">
+            <h1>블랙잭 17</h1>
+            <div>
+                <button id="start" onclick="gameStart()">게임 시작(처음부터 다시 하기)</button>
+            </div>
+            <button id="end" onclick="endGame()" disabled>카드 섞기</button>
+        </div>
+        <div id="rule">
+            <p><a href="Rule.html">RULE</a></p>
+        </div>
+        <div id="money">
+            <p>플레이어 머니 : <span id="playerMoney"></span>$</p>
+            <p>승리시 얻는 금액 : <span id="winMoney"></span>$</p>
+        </div>
+        <div id="bet">
+            <label>베팅 금액 : </label>
+            <input type="number" id="betMoney">
+            <button id="betting" onclick="bet()" disabled>베팅 하기</button>
+            <button id="lose" onclick="giveUp()" disabled>포기 하기</button>
+        </div>
+        <p id="result"></p>
+        <div id="playerBoard" class="board">
+            <div id="playerFirst" class="cardZone"></div>
+            <div id="playerLast" class="cardZone"></div>
+        </div>
+        <div id="dealerBoard" class="board">
+            <div id="dealerFirst" class="cardZone"></div>
+            <div id="dealerLast" class="cardZone"></div>
+        </div>
+    </div>
+    <script>
+
+        let fs = 0;
+        let allCard = [];
+
+        // 배열 생성 (1~10)
+        const heart = Array(9).fill().map((v, i) => '♥' + (i + 2));
+        const diamond = Array(9).fill().map((v, i) => '◆' + (i + 2));
+        const spade = Array(9).fill().map((v, i) => '♠' + (i + 2));
+        const clover = Array(9).fill().map((v, i) => '♣' + (i + 2));
+
+        // 생성된 배열에 10 4개 삽입 (A,J,Q,K)
+        const signArray = [heart, diamond, spade, clover];
+        const signArray2 = ['♥', '◆', '♠', '♣'];
+        for (i = 0; i < 4; i++) {
+            signArray[i].unshift(signArray2[i] + 'A');
+            signArray[i].push(signArray2[i] + 'J');
+            signArray[i].push(signArray2[i] + 'Q');
+            signArray[i].push(signArray2[i] + 'K');
+        }
+
+        // 생성된 배열 확인
+        console.log(heart);
+        console.log(diamond);
+        console.log(spade);
+        console.log(clover);
+
+        // 이들의 합을 담은 배열 생성
+        for (i = 0; i < 13; i++) {
+            allCard.push(heart[i]);
+            allCard.push(diamond[i]);
+            allCard.push(spade[i]);
+            allCard.push(clover[i]);
+        }
+
+        // 확인
+        console.log('all --> ' + allCard)
+
+        // 플레이어와 딜러가 뽑는 카드
+        let playerShuffle = [];
+        let dealerShuffle = [];
+
+        function gameStart() {
+
+            // 승리시 얻는 금액 초기화
+            document.querySelector("#winMoney").innerHTML = 0;
+
+            // 결과창 초기화
+            document.querySelector("#result").innerHTML = "";
+
+            // 카드 초기화
+            document.querySelector("#playerFirst").innerHTML = "";
+            document.querySelector("#playerLast").innerHTML = "";
+            document.querySelector("#dealerFirst").innerHTML = "";
+            document.querySelector("#dealerLast").innerHTML = "";
+
+            // 배열 초기화 + 재생성 (빠진 카드를 포함하여 다시 셔플)
+            allCard = [];
+
+            for (i = 0; i < 13; i++) {
+                allCard.push(heart[i]);
+                allCard.push(diamond[i]);
+                allCard.push(spade[i]);
+                allCard.push(clover[i]);
+            }
+
+            // 확인
+            console.log('after --> ' + allCard)
+
+            // 플레이어와 딜러의 카드 배열 초기화
+            playerShuffle = [];
+            dealerShuffle = [];
+
+
+            // 플레이어 머니 리셋
+            document.querySelector('#playerMoney').innerHTML = 0;
+            // 플레이어 머니 채우기
+            document.querySelector('#playerMoney').innerHTML = 10000;
+
+            // 베팅 버튼 활성화
+            betting.disabled = false;
+
+            // 순서 초기화
+            fs = 0;
+        };
+
+
+
+        // 베팅 버튼 관련
+        function bet() {
+
+            if (fs == 0) {
+
+                // 스크린 비우기
+                document.querySelector("#result").innerHTML = ""
+
+                // 연타 버그 방지
+                betting.disabled = true;
+
+                // 베팅 머니와 플레이어 머니 가져오기
+                const bM = parseInt(document.querySelector('#betMoney').value);
+                const pM = parseInt(document.querySelector('#playerMoney').textContent);
+                console.log(bM);
+                console.log(pM);
+
+                if (bM > pM) {
+                    alert("베팅하려는 금액이 플레이어 머니 액수보다 큽니다. 다시 입력해 주십시오.")
+                    document.querySelector('#betMoney').value = 0;
+                    betting.disabled = false;
+                    return;
+                }
+
+                if (isNaN(bM)) {
+                    alert("베팅 금액을 입력해주세요.")
+                    document.querySelector('#betMoney').value = 0;
+                    betting.disabled = false;
+                    return;
+                }
+
+                if (bM < 1) {
+                    alert("너무 작은 값은 입력할 수 없습니다.")
+                    document.querySelector('#betMoney').value = 0;
+                    betting.disabled = false;
+                    return;
+                }
+
+                if (bM == pM) {
+                    document.querySelector("#result").innerHTML = "ALL IN!!!"
+                }
+
+                // 남은 금액 표시
+                const existingMoney = pM - bM;
+                document.querySelector('#playerMoney').innerHTML = existingMoney;
+
+                // 승리 시 얻는 금액 표시
+                const winMoney = bM * 2;
+                document.querySelector('#winMoney').innerHTML = winMoney;
+
+                setTimeout(() => {
+
+                    // 플레이어 첫턴
+                    while (allCard.length > 51) {
+                        const random = Math.floor(Math.random() * allCard.length);
+                        const spliceArray = allCard.splice(random, 1);
+                        const value = spliceArray[0];
+                        playerShuffle.push(value);
+                    }
+
+                    // 하트, 다이아 글자 색 변경
+                    if (playerShuffle[0].slice(0, 1) == '♥' || playerShuffle[0].slice(0, 1) == '◆') {
+                        playerFirst.style.color = 'red';
+                    };
+
+                    document.querySelector('#playerFirst').innerHTML = playerShuffle[0];
+
+                    //딜러 첫턴
+                    while (allCard.length > 50) {
+                        const random = Math.floor(Math.random() * allCard.length);
+                        const spliceArray = allCard.splice(random, 1);
+                        const value = spliceArray[0];
+                        dealerShuffle.push(value);
+                    }
+
+                    // 하트, 다이아 글자 색 변경
+                    if (dealerShuffle[0].slice(0, 1) == '♥' || dealerShuffle[0].slice(0, 1) == '◆') {
+                        dealerFirst.style.color = 'red';
+                    };
+
+                    document.querySelector('#dealerFirst').innerHTML = dealerShuffle[0];
+
+                    betting.disabled = false;
+
+                    // 첫턴 확인
+                    console.log(playerShuffle);
+                    console.log(dealerShuffle);
+
+                }, 300);
+
+                //포기하기 버튼 활성화
+                lose.disabled = false;
+
+                // 두번째 클릭 판단
+                fs = 1;
+
+                return;
+            }
+
+            if (fs == 1) {
+
+                // 스크린 비우기
+                document.querySelector("#result").innerHTML = ""
+
+                // 베팅 머니와 플레이어 머니 가져오기
+                const bM = parseInt(document.querySelector('#betMoney').value);
+                const pM = parseInt(document.querySelector('#playerMoney').textContent);
+                const wM = parseInt(document.querySelector("#winMoney").textContent);
+                console.log(wM);
+                console.log(bM);
+                console.log(pM);
+
+                if (bM > pM) {
+                    alert("베팅하려는 금액이 플레이어 머니 액수보다 큽니다. 다시 입력해 주십시오.")
+                    document.querySelector('#betMoney').value = 0;
+                    return;
+                }
+
+                if (isNaN(bM)) {
+                    alert("베팅 금액을 입력해주세요.")
+                    document.querySelector('#betMoney').value = 0;
+                    return;
+                }
+
+                if (bM < 1) {
+                    alert("너무 작은 값은 입력할 수 없습니다.")
+                    document.querySelector('#betMoney').value = 0;
+                    return;
+                }
+
+                // 승리 시 얻는 금액 표시
+                if (pM !== 0) {
+                    const winMoney = wM + bM * 2;
+                    document.querySelector('#winMoney').innerHTML = winMoney;
+                };
+
+                // 계산 후 금액 다시 가져오기
+                const wM2 = parseInt(document.querySelector("#winMoney").textContent);
+                console.log('..'+wM2);
+
+                //플레이어 마지막 턴
+                while (allCard.length > 49) {
+                    const random = Math.floor(Math.random() * allCard.length);
+                    const spliceArray = allCard.splice(random, 1);
+                    const value = spliceArray[0];
+                    playerShuffle.push(value);
+                }
+
+                // 하트, 다이아 글자 색 변경
+                if (playerShuffle[1].slice(0, 1) == '♥' || playerShuffle[1].slice(0, 1) == '◆') {
+                    playerLast.style.color = 'red';
+                };
+
+                document.querySelector('#playerLast').innerHTML = playerShuffle[1];
+
+                // 딜러 마지막 턴
+                while (allCard.length > 48) {
+                    const random = Math.floor(Math.random() * allCard.length);
+                    const spliceArray = allCard.splice(random, 1);
+                    const value = spliceArray[0];
+                    dealerShuffle.push(value);
+                }
+
+                // 하트, 다이아 글자 색 변경
+                if (dealerShuffle[1].slice(0, 1) == '♥' || dealerShuffle[1].slice(0, 1) == '◆') {
+                    dealerLast.style.color = 'red';
+                };
+
+                document.querySelector('#dealerLast').innerHTML = dealerShuffle[1];
+
+                // 마지막 턴 확인
+                console.log(playerShuffle);
+                console.log(dealerShuffle);
+
+                // J,Q,K 숫자(10)으로 변환 -> json 배열 활용? key, map
+                for (i = 0; i < playerShuffle.length; i++) {
+                    if (playerShuffle[i].slice(1) == "J" || playerShuffle[i].slice(1) == "Q" || playerShuffle[i].slice(1) == "K") {
+                        if (i == 0) {
+                            playerShuffle.shift();
+                            playerShuffle.unshift("i" + 10);
+                        }
+                        if (i == 1) {
+                            playerShuffle.pop();
+                            playerShuffle.push("i" + 10);
+                        }
+                    }
+                }
+
+                for (i = 0; i < dealerShuffle.length; i++) {
+                    if (dealerShuffle[i].slice(1) == "J" || dealerShuffle[i].slice(1) == "Q" || dealerShuffle[i].slice(1) == "K") {
+                        if (i == 0) {
+                            dealerShuffle.shift();
+                            dealerShuffle.unshift("i" + 10);
+                        }
+                        if (i == 1) {
+                            dealerShuffle.pop();
+                            dealerShuffle.push("i" + 10);
+                        }
+                    }
+                }
+
+                // ACE(A) 숫자(11)로 변환
+                for (i = 0; i < playerShuffle.length; i++) {
+                    if (playerShuffle[i].slice(1) == "A") {
+                        if (i == 0) {
+                            playerShuffle.shift();
+                            playerShuffle.unshift("i" + 11);
+                        }
+                        if (i == 1) {
+                            playerShuffle.pop();
+                            playerShuffle.push("i" + 11);
+                        }
+                    }
+                }
+
+                for (i = 0; i < dealerShuffle.length; i++) {
+                    if (dealerShuffle[i].slice(1) == "A") {
+                        if (i == 0) {
+                            dealerShuffle.shift();
+                            dealerShuffle.unshift("i" + 11);
+                        }
+                        if (i == 1) {
+                            dealerShuffle.pop();
+                            dealerShuffle.push("i" + 11);
+                        }
+                    }
+                }
+
+                // 플레이어와 딜러의 카드의 합
+                let playerSum = 0;
+                let dealerSum = 0;
+
+                for (i = 0; i < playerShuffle.length; i++) {
+                    playerSum += parseInt(playerShuffle[i].slice(1));
+                }
+
+                for (i = 0; i < dealerShuffle.length; i++) {
+                    dealerSum += parseInt(dealerShuffle[i].slice(1));
+                }
+
+                console.log(playerSum);
+                console.log(dealerSum);
+
+                // 결과
+                let result = "";
+                let giveMoney = 0;
+
+                console.log(pM);
+
+                if ((playerSum > 17 && dealerSum > 17) || playerSum == dealerSum) {
+                    result = "무승부 입니다. 베팅된 금액을 전부 돌려드립니다."
+                    giveMoney = (wM / 2) + pM;
+                } else if ((17 - playerSum) < (17 - dealerSum) && playerSum <= 17 || dealerSum > 17) {
+                    result = "플레이어의 승리입니다. 베팅된 금액의 두배를 돌려드립니다."
+                    giveMoney = pM + wM2 - bM;
+                } else if ((17 - playerSum) > (17 - dealerSum) && dealerSum <= 17 || playerSum > 17) {
+                    result = "딜러의 승리입니다. 베팅된 금액을 모두 몰수합니다."
+                    giveMoney = pM - bM;
+                }
+
+                if (giveMoney >= 50000) {
+                    alert("승리을 축하드립니다. 게임을 다시 하려면 다시 하기 버튼을 클릭하십시오.");
+                }
+
+                if (giveMoney <= 0) {
+                    alert("돈을 전부 소진하였습니다. 처음으로 돌아갑니다.")
+                    gameStart();
+
+                    return;
+                }
+
+                document.querySelector("#result").innerHTML = result;
+                document.querySelector("#playerMoney").innerHTML = giveMoney;
+                document.querySelector("#betMoney").value = 0;
+
+                // 엔드 게임 버튼 활성화
+                end.disabled = false;
+
+                // 베팅, 포기 버튼 비활성화
+                betting.disabled = true;
+                lose.disabled = true;
+
+                // 버튼 횟수 판단
+                fs = 0;
+
+                return;
+            }
+        };
+
+        function endGame() {
+
+            // 승리시 얻는 금액 초기화
+            document.querySelector("#winMoney").innerHTML = 0;
+
+            // 결과창 초기화
+            document.querySelector("#result").innerHTML = "";
+
+            // 카드 초기화
+            document.querySelector("#playerFirst").innerHTML = "";
+            document.querySelector("#playerLast").innerHTML = "";
+            document.querySelector("#dealerFirst").innerHTML = "";
+            document.querySelector("#dealerLast").innerHTML = "";
+
+            // 배열 초기화 + 재생성 (빠진 카드를 포함하여 다시 셔플)
+            allCard = [];
+
+            for (i = 0; i < 13; i++) {
+                allCard.push(heart[i]);
+                allCard.push(diamond[i]);
+                allCard.push(spade[i]);
+                allCard.push(clover[i]);
+            }
+
+            // 확인
+            console.log('after --> ' + allCard)
+
+            // 플레이어와 딜러의 카드 배열 초기화
+            playerShuffle = [];
+            dealerShuffle = [];
+
+            // 엔드게임 버튼 비활성화
+            end.disabled = true;
+
+            // 베팅하기 버튼 활성화
+            betting.disabled = false;
+        }
+
+        function giveUp() {
+
+            // 베팅 금액과 승리시 금액 초기화
+            document.querySelector("#winMoney").innerHTML = 0;
+            document.querySelector("#betMoney").value = 0;
+
+            // 결과 통보
+            document.querySelector("#result").innerHTML = "포기하셨습니다. 베팅된 모든 금액을 잃습니다."
+
+            // 카드 초기화
+            document.querySelector("#playerFirst").innerHTML = "";
+            document.querySelector("#playerLast").innerHTML = "";
+            document.querySelector("#dealerFirst").innerHTML = "";
+            document.querySelector("#dealerLast").innerHTML = "";
+
+            // 배열 초기화 + 재생성 (빠진 카드를 포함하여 다시 셔플)
+            allCard = [];
+
+            for (i = 0; i < 13; i++) {
+                allCard.push(heart[i]);
+                allCard.push(diamond[i]);
+                allCard.push(spade[i]);
+                allCard.push(clover[i]);
+            }
+
+            // 확인
+            console.log('lose --> ' + allCard)
+
+            // 플레이어와 딜러의 카드 배열 초기화
+            playerShuffle = [];
+            dealerShuffle = [];
+
+            // 순서 초기화
+            fs = 0;
+
+            // 포기하기 버튼 비활성화
+            lose.disabled = true;
+        }
+
+
+    </script>
+</body>
+
+</html>
